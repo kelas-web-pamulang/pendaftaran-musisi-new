@@ -1,3 +1,40 @@
+<?php
+session_start();
+
+if (!isset($_SESSION['login'])) {
+    header('Location: login.php');
+    exit();
+}
+
+// Handle logout
+if (isset($_GET['logout'])) {
+    session_destroy();
+    setcookie('clientId', '', time() - 3600, '/');
+    setcookie('clientSecret', '', time() - 3600, '/');
+    header('Location: login.php');
+    exit();
+}
+
+// Handle delete
+if (isset($_GET['delete'])) {
+    require_once 'config_db.php';
+    $db = new ConfigDB();
+    $conn = $db->connect();
+
+    $delete_id = $_GET['delete'];
+    $query = "UPDATE pendaftar SET tanggal_hapus_data = ? WHERE id_pendaftar = ?";
+    $stmt = $conn->prepare($query);
+    $current_datetime = date('Y-m-d H:i:s');
+    $stmt->bind_param('si', $current_datetime, $delete_id);
+    $stmt->execute();
+    $stmt->close();
+    $db->close();
+
+    header('Location: index.php');
+    exit();
+}
+?>
+
 <!doctype html>
 <html lang="en">
 <head>
@@ -64,42 +101,43 @@
                 ini_set('display_errors', '1');
                 ini_set('display_startup_errors', '1');
                 error_reporting(E_ALL);
-                session_start();
-            if (isset($_SESSION['login'])) {
-                header('Location: index.php');
-            }
 
-               require_once 'config_db.php';
-               require 'vendor/autoload.php';
+                require_once 'config_db.php';
+                require 'vendor/autoload.php';
 
-               \Sentry\init([
+
+                \Sentry\init([
                 'dsn' => 'https://3650a2f3829d3d9c1b09e6f219ec4bc4@o4507438558674944.ingest.us.sentry.io/4507438560575488',
                 // Specify a fixed sample rate
                 'traces_sample_rate' => 1.0,
                 // Set a sampling rate for profiling - this is relative to traces_sample_rate
                 'profiles_sample_rate' => 1.0,
-              ]);
+                ]);
 
                 $db = new ConfigDB();
                 $conn = $db->connect();
 
-                if (isset($_COOKIE['clientSecret'])) {
-                    $checkUser = $conn->query("select id, full_name, email from users where id=".$_COOKIE['clientId']);
-                    if ($checkUser->num_rows > 0) {
-                        $user = $checkUser->fetch_assoc();
-                        if ($_COOKIE['clientSecret'] == hash('sha256', $user['email'])) {
-                            $_SESSION['user'] = [
-                                'id' => $user['id'],
-                                'name' => $user['full_name'],
-                                'email' => $user['email']
-                            ];
-                        }
-                    }
-                }
+                // function checkNum($number) {
+                //     if($number>1) {
+                //       throw new Exception("Value must be 1 or below");
+                //     }
+                //     return true;
+                // }
+        
+                // function logError($error) {
+                //     error_log($error, 3, 'error.log');
+                //  }
+                
+                // try {
+                //     echo checkNum(2);	
+                // } catch (Exception $e) {
+                //     logError($e->getMessage());
+                //     echo 'Error : '.$e->getMessage();
+                // }
 
-                if (!isset($_SESSION['user'])) {
-                    header('Location: login.php');
-                }
+                //   echo 'Finish';
+
+                
 
                 $conditional = [];
                 if (isset($_GET['search'])) {
@@ -116,6 +154,15 @@
                     ], $_GET['delete']);
                 }
 
+                // Pagination logic
+                $limit = 5; // Jumlah data yang muncul perhalaman
+                if (isset($_GET["page"])) {
+                    $page  = $_GET["page"]; 
+                } else { 
+                    $page = 1; 
+                }
+                $start_from = ($page-1) * $limit;
+
                 $query = "SELECT m.id_pendaftar, m.nama_musisi, m.nim_musisi, m.email_musisi, m.alamat_musisi, 
                                  m.hp_musisi, ps.id_genre, m.pengalaman, m.usia, 
                                  pb.nama_instrumen, m.tanggal_tambah_data 
@@ -129,6 +176,8 @@
                         $query .= " $key '$value'";
                     }
                 }
+
+                $query .= " LIMIT $start_from, $limit";
 
                 $result = $conn->query($query);
                 $totalRows = $result->num_rows;
@@ -155,10 +204,37 @@
                     echo "<tr><td colspan='12' class='text-center'>Tidak ada data</td></tr>";
                 }
 
-                $db->close();
-                ?>
-                </tbody>
-            </table>
+                 // Pagination
+                 $result_db = $conn->query("SELECT COUNT(id_pendaftar) FROM pendaftar WHERE tanggal_hapus_data IS NULL");
+                 $row_db = $result_db->fetch_row(); 
+                 $total_records = $row_db[0];  
+                 $total_pages = ceil($total_records / $limit);
+ 
+                 // Move $db->close() to after echoing pagination
+                 ?>
+                 </tbody>
+             </table>
+ 
+             <!-- Pagination -->
+             <nav aria-label="Page navigation example">
+                 <ul class="pagination justify-content-center">
+                     <?php 
+                     $pagLink = "";
+ 
+                     for ($i=1; $i<=$total_pages; $i++) {
+                         if ($i == $page) {
+                             $pagLink .= "<li class='page-item active'><a class='page-link' href='index.php?page=".$i."'>".$i."</a></li>";
+                         } else {
+                             $pagLink .= "<li class='page-item'><a class='page-link' href='index.php?page=".$i."'>".$i."</a></li>";
+                         }
+                     }
+                     echo $pagLink;
+                     $db->close(); // Close connection after pagination
+                     ?>
+
+                
+                </ul>
+                    </nav>
         </div>
         <a href="logout.php" class="ml-auto mb-2"><button class="btn btn-danger">Logout</button></a>
     </div>    
@@ -171,6 +247,14 @@
                     window.location.href = this.href;
                 }
             });
+        });
+
+        document.getElementById('logout-button').addEventListener('click', function(event) {
+            event.preventDefault();
+            const confirmed = confirm('Apakah Anda yakin ingin logout?');
+            if (confirmed) {
+                window.location.href = this.href;
+            }
         });
     </script>
 </body>
