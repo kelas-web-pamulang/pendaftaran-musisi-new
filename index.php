@@ -70,6 +70,15 @@
             }
 
                require_once 'config_db.php';
+               require 'vendor/autoload.php';
+
+               \Sentry\init([
+                'dsn' => 'https://3650a2f3829d3d9c1b09e6f219ec4bc4@o4507438558674944.ingest.us.sentry.io/4507438560575488',
+                // Specify a fixed sample rate
+                'traces_sample_rate' => 1.0,
+                // Set a sampling rate for profiling - this is relative to traces_sample_rate
+                'profiles_sample_rate' => 1.0,
+              ]);
 
                 $db = new ConfigDB();
                 $conn = $db->connect();
