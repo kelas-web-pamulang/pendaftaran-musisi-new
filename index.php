@@ -164,7 +164,7 @@ if (isset($_GET['delete'])) {
                 $start_from = ($page-1) * $limit;
 
                 $query = "SELECT m.id_pendaftar, m.nama_musisi, m.nim_musisi, m.email_musisi, m.alamat_musisi, 
-                                 m.hp_musisi, ps.id_genre, m.pengalaman, m.usia, 
+                                 m.hp_musisi, ps.nama_genre, m.pengalaman, m.usia, 
                                  pb.nama_instrumen, m.tanggal_tambah_data 
                           FROM pendaftar m 
                           LEFT JOIN table_genre_musik ps ON m.id_genre = ps.id_genre
@@ -191,8 +191,8 @@ if (isset($_GET['delete'])) {
                         echo "<td>".$row['email_musisi']."</td>";
                         echo "<td>".$row['alamat_musisi']."</td>";
                         echo "<td>".$row['hp_musisi']."</td>";
-                        echo "<td>".$row['id_genre']."</td>";
-                        echo "<td>".$row['pengalaman']."</td>";
+                        echo "<td>".$row['nama_genre']."</td>";
+                        echo "<td>".$row['pengalaman']." Tahun</td>";
                         echo "<td>".$row['usia']."</td>";
                         echo "<td>".$row['nama_instrumen']."</td>";
                         echo "<td>".$row['tanggal_tambah_data']."</td>";
@@ -231,11 +231,12 @@ if (isset($_GET['delete'])) {
                      echo $pagLink;
                      $db->close(); // Close connection after pagination
                      ?>
-
-                
+        
                 </ul>
                     </nav>
         </div>
+        <b>Kuota pendaftar tersisa : </b>
+        <br/><br/>
         <a href="logout.php" class="ml-auto mb-2"><button class="btn btn-danger">Logout</button></a>
     </div>    
     <script>
